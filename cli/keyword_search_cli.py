@@ -4,34 +4,31 @@ import argparse, json, string
 from nltk.stem import PorterStemmer
 
 
+def tokenize_input(phrase, stopwords, table, stemmer):
+    tokens = phrase.lower().translate(table).split(" ") #uncapitalize and remove punctuation to list
+    tokens = list(filter(lambda x: x != "",tokens)) #removes blank
+    tokens = list(filter(lambda x: x not in stopwords, tokens)) #removes words without meaning
+    tokens = list(map(lambda x: stemmer.stem(x),   tokens)) #turns words to their stem
+    return tokens    
+
 def tokenize_text(dict, args): #a dictionary and a string args
     results = []
+    
+    stopwords = []
+    with open("data/stopwords.txt", 'r') as f:
+        txt = f.read()
+        stopwords = txt.splitlines()
+    
+    stemmer = PorterStemmer()
+    table = str.maketrans("", "", string.punctuation) #table of transformation, puntuation -> ""
+    query_tokens = tokenize_input(args, stopwords, table, stemmer)
 
     for entry in dict["movies"]: 
-        stopwords = []
-        with open("data/stopwords.txt", 'r') as f:
-            txt = f.read()
-            stopwords = txt.splitlines()
-
-        stemmer = PorterStemmer()
-
-        table = str.maketrans("", "", string.punctuation) #table of transformation, puntuation -> ""
-
-        entry_tokens = entry["title"].lower().translate(table).split(" ") #uncapitalize and remove punctuation to list
-        entry_tokens = list(filter(lambda x: x != "", entry_tokens)) #removes blank
-        entry_tokens = list(filter(lambda x: x not in stopwords, entry_tokens)) #removes words without meaning
-        entry_tokens = list(map(lambda x: stemmer.stem(x), entry_tokens)) #turns words to their stem
-                
-        query_tokens = args.query.lower().translate(table).split(" ")
-        query_tokens = list(filter(lambda x: x != "", query_tokens))
-        query_tokens = list(filter(lambda x: x not in stopwords, query_tokens))
-        query_tokens = list(map(lambda x: stemmer.stem(x), query_tokens))
-
+        entry_tokens = tokenize_input(entry["title"], stopwords, table, stemmer)
         if any(any(q in e for e in entry_tokens) for q in query_tokens):
             results.append(entry)
 
     return results
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")

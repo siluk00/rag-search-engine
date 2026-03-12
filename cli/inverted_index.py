@@ -1,5 +1,6 @@
 import json, os, pickle, collections, math
 from keyword_search import tokenize_input, tokenize_word
+from constants import BM25_K1
 
 
 
@@ -48,7 +49,13 @@ class InvertedIndex:
         token = tokenize_word(term)
         
         df = len(self.get_document(token))
-        return math.log((N-df+0.5)/(df+0.5)+1)
+        return math.log((N-df+0.5)/(df+0.5)+1) #idf bm25 formula
+    
+    #calculates bm25_tf for given term on document with id doc_id
+    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1) -> float:
+        tf = self.get_tf(doc_id, term)
+        return (tf * (k1 + 1)/(tf+k1)) #tf saturation formula
+        
     
     #builds the inverted index 
     def build(self):

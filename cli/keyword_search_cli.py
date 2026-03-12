@@ -63,10 +63,18 @@ def main() -> None:
             print(f"Term frequency of term {args.term} with doc_id {args.doc_id} is {frequency}")
         case "idf":
             load(inverted_index)
-            token = tokenize_word(args.term)
+            tokens = tokenize_input(args.term)
+            if len(tokens) == 0:
+                print("invalid token")
+                exit(1)
+            elif len(tokens) == 1:
+                token = tokens[0]    
             ids = inverted_index.get_document(token)
             document_size = len(inverted_index.docmap)
-            idf = math.log((document_size + 1)/(len(ids)+1))
+            idf = math.log((document_size+1)/(len(ids)+1))
+            print(f"total docs: {document_size}")
+            print(f"docs with term: {len(ids)}")
+            print(f"index size: {len(inverted_index.index)}")
             print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
         case _:
             parser.print_help()

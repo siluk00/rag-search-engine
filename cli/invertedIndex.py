@@ -1,23 +1,25 @@
-import json, string, os, pickle
-from nltk.stem import PorterStemmer
+import json, os, pickle, collections
+from keyword_search import tokenize_input, tokenize_word
 
-def tokenize_input(phrase, stopwords, table, stemmer): #returns a list of tokenized inputs
-    tokens = phrase.lower().translate(table).split(" ") #uncapitalize and remove punctuation to list
-    tokens = list(filter(lambda x: x != "",tokens)) #removes blank
-    tokens = list(filter(lambda x: x not in stopwords, tokens)) #removes words without meaning
-    tokens = list(map(lambda x: stemmer.stem(x),   tokens)) #turns words to their stem
-    return tokens 
+
 
 class InvertedIndex:
     def __init__(self):
-        self.index = dict() #a dictionary mappin words to id / inverted index
+        self.index = dict() #a dictionary mappin words to ids / inverted index
         self.docmap = dict() # a dictionary mapping id to  title + description
+        self.term_frequencies = dict() # a dictionary mapping doc_id to Counter object 
     
     #adds text to the set with doc_id key
-    def _add_document(self, doc_id, text):
-        if not (text in self.index):
-            self.index[text] = set()
-        self.index[text].add(doc_id)
+    def __add_document(self, doc_id, text):
+        tokens = tokenize_input(text)
+
+        for token in tokens:
+            if not (token in self.index):
+                self.index[token] = set()
+            if not(doc_id in self.term_frequencies):
+                self.term_frequencies[doc_id] = collections.Counter()
+            self.index[token].add(doc_id)
+            self.term_frequencies[doc_id][token] += 1
 
     # gets the set of doc_ids as  list for the term searched
     def get_document(self, term):
@@ -29,30 +31,33 @@ class InvertedIndex:
         document.sort()
         return document #returns a list
     
+    def get_tf(self, doc_id, term):
+        token = tokenize_word(term)
+        if token == "":
+            return 0
+        if token not in self.term_frequencies[doc_id]:
+            return 0
+        if doc_id not in self.term_frequencies:
+            print("doc_id doesn'd exit")
+            exit(1)
+        return self.term_frequencies[doc_id][token]
+        
+    
     #builds the inverted index 
     def build(self):
         dict = {}
         with open("data/movies.json", 'r') as f:
                 dict = json.load(f)
-    
-        stopwords = []
-        with open("data/stopwords.txt", 'r') as f:
-            txt = f.read()
-            stopwords = txt.splitlines()
-    
-        stemmer = PorterStemmer()
-        table = str.maketrans("", "", string.punctuation)
 
         for entry in dict["movies"]:
-            tokens = tokenize_input(f"{entry["title"]} {entry["description"]}", stopwords, table, stemmer)
+            self.__add_document(entry["id"], f"{entry["title"]} {entry["description"]}")
             self.docmap[entry["id"]] = entry
-
-            for token in tokens:
-                self._add_document(entry["id"], token)
     
     def save(self):
         index_path = "cache/index.pkl"
         docmap_path = "cache/docmap.pkl"
+        term_frequencies_path = "cache/term_frequencies.pkl"
+
         os.makedirs(os.path.dirname(index_path), exist_ok=True)
 
         with open(index_path, 'wb') as f:
@@ -60,15 +65,23 @@ class InvertedIndex:
         
         with open(docmap_path, 'wb') as f:
             pickle.dump(self.docmap, f)
+        
+        with open(term_frequencies_path, 'wb') as f:
+            pickle.dump(self.term_frequencies, f)
 
     def load(self):
         index_path = "cache/index.pkl"
         docmap_path = "cache/docmap.pkl"
+        term_frequencies_path = "cache/term_frequencies.pkl"
+
         with open(index_path, 'rb') as f:
             self.index = pickle.load(f)
+        
         with open(docmap_path, 'rb') as f:
             self.docmap = pickle.load(f)
        
+        with open(term_frequencies_path, 'rb') as f:
+            self.term_frequencies = pickle.load(f)
         
 
             

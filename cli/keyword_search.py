@@ -1,7 +1,7 @@
 import string
 from nltk.stem import PorterStemmer
 
-def tokenize_input(words):
+def tokenize_input(words) -> list[str]:
     stopwords, stemmer, table = __prebuild_tokenizetion()
     tokens = words.lower().translate(table).split() #uncapitalize and remove punctuation to list
     tokens = list(filter(lambda x: x != "",tokens)) #removes blank
@@ -9,14 +9,14 @@ def tokenize_input(words):
     tokens = list(map(lambda x: stemmer.stem(x),   tokens)) #turns words to their stem
     return tokens   
 
-def tokenize_word(word):
-    stopwords, stemmer, table = __prebuild_tokenizetion()
-    token = word.lower().translate(table)
-    if token in stopwords:
-        return ""
-    token = stemmer.stem(token)
+def tokenize_word(word: str) -> str:
+    tokens = tokenize_input(word)
+    if len(tokens) == 1:
+        token = tokens[0] 
+    else:
+        print("invalid token")
+        exit(1)
     return token
-
 
 def __prebuild_tokenizetion():
     stopwords = []
@@ -27,4 +27,6 @@ def __prebuild_tokenizetion():
     stemmer = PorterStemmer()
     table = str.maketrans("", "", string.punctuation) #table of transformation, puntuation -> ""
     return stopwords, stemmer, table
+
+
 

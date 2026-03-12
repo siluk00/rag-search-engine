@@ -1,4 +1,4 @@
-import json, os, pickle, collections
+import json, os, pickle, collections, math
 from keyword_search import tokenize_input, tokenize_word
 
 
@@ -10,7 +10,7 @@ class InvertedIndex:
         self.term_frequencies = dict() # a dictionary mapping doc_id to Counter object 
     
     #adds text to the set with doc_id key
-    def __add_document(self, doc_id, text):
+    def __add_document(self, doc_id: int, text: str):
         tokens = tokenize_input(text)
 
         for token in tokens:
@@ -22,7 +22,7 @@ class InvertedIndex:
             self.term_frequencies[doc_id][token] += 1
 
     # gets the set of doc_ids as  list for the term searched
-    def get_document(self, term):
+    def get_document(self, term:str) -> list[int]:
         if term not in self.index:
             return []
         
@@ -31,7 +31,7 @@ class InvertedIndex:
         document.sort()
         return document #returns a list
     
-    def get_tf(self, doc_id, term):
+    def get_tf(self, doc_id: int, term: str) -> int:
         token = tokenize_word(term)
         if token == "":
             return 0
@@ -41,7 +41,14 @@ class InvertedIndex:
             print("doc_id doesn'd exit")
             exit(1)
         return self.term_frequencies[doc_id][token]
+
+    #calculates bm25_idf for given term    
+    def get_bm25_idf(self, term: str) -> float:
+        N = len(self.docmap)
+        token = tokenize_word(term)
         
+        df = len(self.get_document(token))
+        return math.log((N-df+0.5)/(df+0.5)+1)
     
     #builds the inverted index 
     def build(self):

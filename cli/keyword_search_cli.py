@@ -3,21 +3,22 @@
 import argparse, math
 from inverted_index import InvertedIndex
 from keyword_search import tokenize_input, tokenize_word
-from constants import BM25_K1
+from constants import BM25_K1, BM25_B
 
 def bm25_idf_command(term: str, inverted_index: InvertedIndex) -> float:
     load(inverted_index)
-    return inverted_index.get_bm25_idf(term)
+    return inverted_index.get_bm25_idf(tokenize_word(term))
 
-def bm_tf_command(doc_id: int, term: str, inverted_index: InvertedIndex, k1=BM25_K1) -> float:
+def bm_tf_command(doc_id: int, term: str, inverted_index: InvertedIndex, k1=BM25_K1, b=BM25_B) -> float:
     load(inverted_index)
-    return inverted_index.get_bm25_tf(doc_id, term)
+    return inverted_index.get_bm25_tf(doc_id, tokenize_word(term), k1, b)
 
     
 def load(inverted_index):
     try:
         inverted_index.load()
     except Exception as e:
+        print(f"Error in load: {e}")
         print("cannot find file")
         exit(1)
  
@@ -55,6 +56,7 @@ def main() -> None:
     bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
     bm25_tf_parser.add_argument("term", type=str, help="Term to get BM25 TF score for")
     bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=BM25_K1, help="Tunable BM25 K1 parameter")
+    bm25_tf_parser.add_argument("b", type=float, nargs='?', default=BM25_B, help="Tunable BM25 b parameter")
 
     args = parser.parse_args()
     inverted_index = InvertedIndex()
@@ -78,8 +80,6 @@ def main() -> None:
         case "build":
             inverted_index.build()
             inverted_index.save()
-            #print(inverted_index.index)
-            docs = inverted_index.get_document("merida")
         case "tf":
             load(inverted_index)
             token = tokenize_word(args.term)
@@ -118,10 +118,7 @@ def main() -> None:
             print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
         case "bm25tf":
             token = tokenize_word(args.term)
-            if args.k1 is None:
-                bm25tf = bm_tf_command(args.doc_id, args.term, inverted_index)          # uses function default
-            else:
-                bm25tf = bm_tf_command(args.doc_id, args.term, inverted_index, k1=args.k1)
+            bm25tf = bm_tf_command(args.doc_id, args.term, inverted_index, args.k1, args.b)          # uses function default
             print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
         case _:
             parser.print_help()

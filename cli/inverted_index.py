@@ -1,18 +1,35 @@
 import json, os, pickle, collections, math
 from keyword_search import tokenize_input, tokenize_word
-from constants import BM25_K1
+from constants import BM25_K1, BM25_B
+from pathlib import Path
 
 
 
 class InvertedIndex:
+    CACHE_DIR = "cache"
+
     def __init__(self):
+        os.makedirs(self.CACHE_DIR, exist_ok=True)
+
         self.index = dict() #a dictionary mappin words to ids / inverted index
         self.docmap = dict() # a dictionary mapping id to  title + description
         self.term_frequencies = dict() # a dictionary mapping doc_id to Counter object 
+        self.doc_lengths = dict() #a dictionary mapping doc id to amount of words
+
+        self.index_path = f"{self.CACHE_DIR}/index.pkl"
+        self.docmap_path = f"{self.CACHE_DIR}/docmap.pkl"
+        self.term_frequencies_path = f"{self.CACHE_DIR}/term_frequencies.pkl"
+        self.doc_lengths_path = f"{self.CACHE_DIR}/doc_lengths.pkl"
+
+    def __get_avg_doc_length(self) -> float:
+        if len(self.doc_lengths) == 0:
+            return 0.0
+        return sum(self.doc_lengths.values())/len(self.doc_lengths)
     
     #adds text to the set with doc_id key
     def __add_document(self, doc_id: int, text: str):
         tokens = tokenize_input(text)
+        self.doc_lengths[doc_id] = len(tokens)
 
         for token in tokens:
             if not (token in self.index):
@@ -52,10 +69,12 @@ class InvertedIndex:
         return math.log((N-df+0.5)/(df+0.5)+1) #idf bm25 formula
     
     #calculates bm25_tf for given term on document with id doc_id
-    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1) -> float:
+    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1, b = BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
-        return (tf * (k1 + 1)/(tf+k1)) #tf saturation formula
-        
+        avg = self.__get_avg_doc_length()
+        doc_len = self.doc_lengths[doc_id]
+        length_norm = 1 - b + b * (self.doc_lengths[doc_id]/self.__get_avg_doc_length()) #normalization of length
+        return (tf * (k1 + 1)/(tf+k1 * length_norm)) #tf saturation formula
     
     #builds the inverted index 
     def build(self):
@@ -68,34 +87,30 @@ class InvertedIndex:
             self.docmap[entry["id"]] = entry
     
     def save(self):
-        index_path = "cache/index.pkl"
-        docmap_path = "cache/docmap.pkl"
-        term_frequencies_path = "cache/term_frequencies.pkl"
-
-        os.makedirs(os.path.dirname(index_path), exist_ok=True)
-
-        with open(index_path, 'wb') as f:
+        with open(self.index_path, 'wb') as f:
             pickle.dump(self.index, f)
         
-        with open(docmap_path, 'wb') as f:
+        with open(self.docmap_path, 'wb') as f:
             pickle.dump(self.docmap, f)
         
-        with open(term_frequencies_path, 'wb') as f:
+        with open(self.term_frequencies_path, 'wb') as f:
             pickle.dump(self.term_frequencies, f)
 
-    def load(self):
-        index_path = "cache/index.pkl"
-        docmap_path = "cache/docmap.pkl"
-        term_frequencies_path = "cache/term_frequencies.pkl"
+        with open(self.doc_lengths_path, 'wb') as f:
+            pickle.dump(self.doc_lengths, f)
 
-        with open(index_path, 'rb') as f:
+    def load(self):
+        with open(self.index_path, 'rb') as f:
             self.index = pickle.load(f)
         
-        with open(docmap_path, 'rb') as f:
+        with open(self.docmap_path, 'rb') as f:
             self.docmap = pickle.load(f)
        
-        with open(term_frequencies_path, 'rb') as f:
+        with open(self.term_frequencies_path, 'rb') as f:
             self.term_frequencies = pickle.load(f)
+
+        with open(self.doc_lengths_path, 'rb') as f:
+            self.doc_lengths = pickle.load(f)
         
 
             

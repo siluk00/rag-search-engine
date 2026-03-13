@@ -18,8 +18,7 @@ def load(inverted_index):
     try:
         inverted_index.load()
     except Exception as e:
-        print(f"Error in load: {e}")
-        print("cannot find file")
+        print(f"cannot find file: {e}")
         exit(1)
  
 def main() -> None:
@@ -58,6 +57,11 @@ def main() -> None:
     bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=BM25_K1, help="Tunable BM25 K1 parameter")
     bm25_tf_parser.add_argument("b", type=float, nargs='?', default=BM25_B, help="Tunable BM25 b parameter")
 
+    #bm25search parser
+    bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+    bm25search_parser.add_argument("limit", type=int, nargs='?', default=5, help="limit search results")
+
     args = parser.parse_args()
     inverted_index = InvertedIndex()
 
@@ -87,39 +91,27 @@ def main() -> None:
             print(f"Term frequency of term {args.term} with doc_id {args.doc_id} is {frequency}")
         case "idf":
             load(inverted_index)
-            tokens = tokenize_input(args.term)
-            if len(tokens) == 0:
-                print("invalid token")
-                exit(1)
-            elif len(tokens) == 1:
-                token = tokens[0]    
+            token = tokenize_word(args.term)   
             ids = inverted_index.get_document(token)
             document_size = len(inverted_index.docmap)
             idf = math.log((document_size+1)/(len(ids)+1))
-            print(f"total docs: {document_size}")
-            print(f"docs with term: {len(ids)}")
-            print(f"index size: {len(inverted_index.index)}")
             print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
         case "tfidf":
             load(inverted_index)
-            tokens = tokenize_input(args.term)
-            if len(tokens) == 0:
-                print("invalid token")
-                exit(1)
-            elif len(tokens) == 1:
-                token = tokens[0]   
+            token = tokenize_word(args.term)
             document_size = len(inverted_index.docmap)
             ids = inverted_index.get_document(token)
             tfidf = inverted_index.get_tf(args.doc_id, token) * math.log((document_size+1)/(len(ids)+1))
             print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tfidf:.2f}")
         case "bm25idf":
-            token = tokenize_word(args.term)
-            bm25idf = bm25_idf_command(token, inverted_index)
+            bm25idf = bm25_idf_command(args.term, inverted_index)
             print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
         case "bm25tf":
-            token = tokenize_word(args.term)
             bm25tf = bm_tf_command(args.doc_id, args.term, inverted_index, args.k1, args.b)          # uses function default
             print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
+        case "bm25search":
+            load(inverted_index)
+            inverted_index.bm25_search(args.query, args.limit)
         case _:
             parser.print_help()
 

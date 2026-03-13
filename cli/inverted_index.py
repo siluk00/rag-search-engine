@@ -12,7 +12,7 @@ class InvertedIndex:
         os.makedirs(self.CACHE_DIR, exist_ok=True)
 
         self.index = dict() #a dictionary mappin words to ids / inverted index
-        self.docmap = dict() # a dictionary mapping id to  title + description
+        self.docmap = dict() # a dictionary mapping id to full document
         self.term_frequencies = dict() # a dictionary mapping doc_id to Counter object 
         self.doc_lengths = dict() #a dictionary mapping doc id to amount of words
 
@@ -71,11 +71,26 @@ class InvertedIndex:
     #calculates bm25_tf for given term on document with id doc_id
     def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1, b = BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
-        avg = self.__get_avg_doc_length()
-        doc_len = self.doc_lengths[doc_id]
         length_norm = 1 - b + b * (self.doc_lengths[doc_id]/self.__get_avg_doc_length()) #normalization of length
         return (tf * (k1 + 1)/(tf+k1 * length_norm)) #tf saturation formula
     
+    def bm25(self, doc_id: int, term: str) -> float:
+        return self.get_bm25_idf(term) * self.get_bm25_tf(doc_id, term)
+    
+    def bm25_search(self, query, limit):
+        tokens = tokenize_input(query)
+        scores = dict()
+
+        for doc_id in self.docmap.keys():
+            total_score = 0
+            for token in tokens:
+                total_score += self.bm25(doc_id, token)
+            scores[doc_id] = total_score
+        
+        sorted_list = sorted(scores, key=scores.get, reverse=True)[:limit]
+        for i, doc_id in enumerate(sorted_list):
+            print(f"{i+1}. ({doc_id}) {self.docmap[doc_id]["title"]} - Score: {scores[doc_id]:.2f}")
+
     #builds the inverted index 
     def build(self):
         dict = {}

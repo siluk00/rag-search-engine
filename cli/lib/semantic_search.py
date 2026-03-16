@@ -83,7 +83,7 @@ class SemanticSearch:
         with open('cache/movie_embeddings.npy', 'rb') as f:
             self.embeddings = np.load(f)
 
-        if len(self.embeddings) != len(documents):
+        if len(self.embeddings) != len(self.documents['movies']):
             raise Exception("length of embeddings different from length of documents")
 
         return self.embeddings
@@ -99,9 +99,9 @@ class SemanticSearch:
         similarity_list = []
 
         for i in range(len(self.embeddings)):
-            similarity_list.append((cosine_similarity(query_embedding, self.embeddings[i])), self.documents[i])
+            similarity_list.append((cosine_similarity(query_embedding, self.embeddings[i]), self.documents['movies'][i]))
         
-        similarity_list.sort(key=lambda x: x[0], reverse=True)[:limit]
+        similarity_list.sort(key=lambda x: x[0], reverse=True)
         top_results = similarity_list[:limit]
         results = []
         

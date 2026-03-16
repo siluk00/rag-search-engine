@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
+import os, json
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 def main():
@@ -22,6 +22,11 @@ def main():
     embed_query = subparsers.add_parser("embedquery", help="Put the text to be embedded") #name + search + query
     embed_query.add_argument("query", type=str, help="Query to be embedded")
 
+    #search query parser
+    search_query = subparsers.add_parser("search", help="Search for the best similarities") #name + search + query
+    search_query.add_argument("query", type=str, help="Query to be searched")
+    search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
+
     args = parser.parse_args()
 
     
@@ -39,6 +44,18 @@ def main():
         case "embedquery":
             from lib.semantic_search import embed_query_text
             embed_query_text(args.query)
+        case "search":
+            from lib.semantic_search import SemanticSearch
+            semantic_search = SemanticSearch()
+            with open('data/movies.json', 'rb') as f:
+                documents = json.load(f)
+            semantic_search.load_or_create_embeddings(documents)
+            results = semantic_search.search(args.query, args.limit)
+            counter = 1
+            for entry in results:
+                print(f"{counter}. {entry["title"]} (score: {entry["score"]:.4f})")
+                #print(f"   {entry["description"]}")
+                counter += 1
         case _:
             parser.print_help()
 

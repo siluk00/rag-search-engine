@@ -30,6 +30,17 @@ def embed_query_text(query: str):
     print(f"First 5 dimensions: {embedding[:5]}")
     print(f"Shape: {embedding.shape}")
 
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot_product / (norm1 * norm2)
+
+
 class SemanticSearch:
     def __init__(self):
         # Load the model (downloads automatically the first time)
@@ -76,6 +87,35 @@ class SemanticSearch:
             raise Exception("length of embeddings different from length of documents")
 
         return self.embeddings
+    
+    def search(self, query, limit):
+        
+        file_path = Path('cache/movie_embeddings.npy')
+
+        if not file_path.exists():
+            raise ValueError("No embeddings loaded. Call `load_or_create_embeddings` first.")
+        
+        query_embedding = self.generate_embedding(query)
+        similarity_list = []
+
+        for i in range(len(self.embeddings)):
+            similarity_list.append((cosine_similarity(query_embedding, self.embeddings[i])), self.documents[i])
+        
+        similarity_list.sort(key=lambda x: x[0], reverse=True)[:limit]
+        top_results = similarity_list[:limit]
+        results = []
+        
+        for entry in top_results:
+            results.append({
+                "score": entry[0],
+                "title": entry[1]["title"],
+                "description": entry[1]["description"]
+                })
+        
+        return results
+            
+            
+
 
 
 

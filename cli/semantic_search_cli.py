@@ -16,16 +16,22 @@ def main():
     embed_text_parser.add_argument("term", type=str, help="Term to be embedded")
 
     #verify_embeddings parser
-    subparsers.add_parser("verify_embeddings", help="Verify embeddings") #name + search + query
+    subparsers.add_parser("verify_embeddings", help="Verify embeddings") 
 
     #embed_query parser
-    embed_query = subparsers.add_parser("embedquery", help="Put the text to be embedded") #name + search + query
+    embed_query = subparsers.add_parser("embedquery", help="Put the text to be embedded") 
     embed_query.add_argument("query", type=str, help="Query to be embedded")
 
     #search query parser
-    search_query = subparsers.add_parser("search", help="Search for the best similarities") #name + search + query
+    search_query = subparsers.add_parser("search", help="Search for the best similarities") 
     search_query.add_argument("query", type=str, help="Query to be searched")
     search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
+ 
+    #chunk query parser
+    chunk_parser = subparsers.add_parser("chunk", help="Chunk text") 
+    chunk_parser.add_argument("text", type=str, help="Text to be chunked")
+    chunk_parser.add_argument("--chunk-size", type=int, nargs='?', default=200, help="limit size of each chunk")
+    chunk_parser.add_argument("--overlap", type=int, nargs='?', default=0, help="Amount of overlap in words")
 
     args = parser.parse_args()
 
@@ -56,6 +62,16 @@ def main():
                 print(f"{counter}. {entry["title"]} (score: {entry["score"]:.4f})")
                 #print(f"   {entry["description"]}")
                 counter += 1
+        case "chunk":
+            words = args.text.split()
+            n = args.chunk_size
+            step = args.chunk_size - args.overlap
+            chunks = [words[i:i+n] for i in range(0, len(words), step)]
+            print(f"Chunking {len(args.text)} characters")
+            i = 1
+            for chunk in chunks:
+                print(f"{i}. {" ".join(chunk)}")
+                i+=1
         case _:
             parser.print_help()
 

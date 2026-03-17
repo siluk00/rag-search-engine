@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import os, json
+import os, json, re
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 def main():
@@ -27,11 +27,17 @@ def main():
     search_query.add_argument("query", type=str, help="Query to be searched")
     search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
  
-    #chunk query parser
+    #chunk parser
     chunk_parser = subparsers.add_parser("chunk", help="Chunk text") 
     chunk_parser.add_argument("text", type=str, help="Text to be chunked")
     chunk_parser.add_argument("--chunk-size", type=int, nargs='?', default=200, help="limit size of each chunk")
     chunk_parser.add_argument("--overlap", type=int, nargs='?', default=0, help="Amount of overlap in words")
+
+    #semantic_chunk parser
+    semantic_chunk_parser = subparsers.add_parser("semantic_chunk", help="Semantic chunk text") 
+    semantic_chunk_parser.add_argument("text", type=str, help="Text to be chunked")
+    semantic_chunk_parser.add_argument("--max-chunk-size", type=int, nargs='?', default=4, help="limit size of each chunk")
+    semantic_chunk_parser.add_argument("--overlap", type=int, nargs='?', default=0, help="Amount of overlap in words")
 
     args = parser.parse_args()
 
@@ -68,6 +74,16 @@ def main():
             step = args.chunk_size - args.overlap
             chunks = [words[i:i+n] for i in range(0, len(words), step)]
             print(f"Chunking {len(args.text)} characters")
+            i = 1
+            for chunk in chunks:
+                print(f"{i}. {" ".join(chunk)}")
+                i+=1
+        case "semantic_chunk":
+            words = re.split(r"(?<=[.!?])\s+", args.text)
+            step = args.max_chunk_size-args.overlap
+            n = args.max_chunk_size
+            chunks = [words[i: i+n] for i in range(0, len(words), step)]
+            print(f"Semantically chunking {len(args.text)} characters")
             i = 1
             for chunk in chunks:
                 print(f"{i}. {" ".join(chunk)}")

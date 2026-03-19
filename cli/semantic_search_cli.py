@@ -4,6 +4,11 @@ import argparse
 import os, json, re
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+def load_movies():
+    with open('data/movies.json', 'r') as f:
+                return json.load(f)['movies']
+
+
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands") # subcomnmands like git add
@@ -39,9 +44,15 @@ def main():
     semantic_chunk_parser.add_argument("--max-chunk-size", type=int, nargs='?', default=4, help="limit size of each chunk")
     semantic_chunk_parser.add_argument("--overlap", type=int, nargs='?', default=0, help="Amount of overlap in words")
 
-    args = parser.parse_args()
+    #embed_chunks parser
+    subparsers.add_parser("embed_chunks", help="Embed all movies into chunks") 
 
-    
+    #search chunk query parser
+    search_chunked = subparsers.add_parser("search_chunked", help="Search for the best similarities witth chunked data") 
+    search_chunked.add_argument("query", type=str, help="Query to be searched")
+    search_chunked.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
+
+    args = parser.parse_args()
 
     match args.command:
         case "verify":
@@ -88,6 +99,22 @@ def main():
             for chunk in chunks:
                 print(f"{i}. {" ".join(chunk)}")
                 i+=1
+
+        case 'embed_chunks':
+            from lib.semantic_search import ChunkedSemanticSearch
+            movies_dict = load_movies()
+            semantic_search = ChunkedSemanticSearch()
+            embeddings = semantic_search.load_or_create_chunk_embeddings(movies_dict)
+            print(f"Generated {len(embeddings)} chunked embeddings")
+        case 'search_chunked':
+            from lib.semantic_search import ChunkedSemanticSearch
+            movies_dict = load_movies()
+            semantic_search = ChunkedSemanticSearch()
+            semantic_search.load_or_create_chunk_embeddings(movies_dict)
+            response = semantic_search.search_chunks(args.query, args.limit)
+            for i in range(len(response)):
+                print(f"\n{i+1}. {response[i]['title']} (score: {response[i]['score']:.4f})")
+                print(f"   {response[i]['document']}...")
         case _:
             parser.print_help()
 

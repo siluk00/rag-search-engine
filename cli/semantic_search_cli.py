@@ -90,14 +90,12 @@ def main():
                 print(f"{i}. {" ".join(chunk)}")
                 i+=1
         case "semantic_chunk":
-            words = re.split(r"(?<=[.!?])\s+", args.text)
-            step = args.max_chunk_size-args.overlap
-            n = args.max_chunk_size
-            chunks = [words[i: i+n] for i in range(0, len(words), step)]
+            from lib.semantic_search import semantic_chunk
+            chunks = semantic_chunk(args.text, args.max_chunk_size, args.overlap)
             print(f"Semantically chunking {len(args.text)} characters")
             i = 1
             for chunk in chunks:
-                print(f"{i}. {" ".join(chunk)}")
+                print(f"{i}. {chunk}")
                 i+=1
 
         case 'embed_chunks':

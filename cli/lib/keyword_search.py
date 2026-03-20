@@ -1,7 +1,6 @@
 import string
 from nltk.stem import PorterStemmer
 import json, os, pickle, collections, math
-from cli.lib.keyword_search import tokenize_input, tokenize_word
 from constants import BM25_K1, BM25_B
 
 def tokenize_input(words) -> list[str]:

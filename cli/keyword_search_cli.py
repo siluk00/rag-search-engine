@@ -2,7 +2,7 @@
 
 import argparse, math
 from lib.keyword_search import InvertedIndex
-from cli.lib.keyword_search import tokenize_input, tokenize_word
+from lib.keyword_search import tokenize_input, tokenize_word
 from constants import BM25_K1, BM25_B
 
 def bm25_idf_command(term: str, inverted_index: InvertedIndex) -> float:

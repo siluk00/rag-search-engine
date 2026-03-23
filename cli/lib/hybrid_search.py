@@ -14,6 +14,9 @@ def normalize(lst_to_normalize: list[float]) -> list[float]:
         return [1.0 for _ in lst_to_normalize]
     return [(x - m) / (M - m) for x in lst_to_normalize]
 
+def hybrid_score(bm25_score, semantic_score, alpha=0.5):
+    return alpha * bm25_score + (1 - alpha) * semantic_score
+
 class HybridSearch:
     def __init__(self, documents):
         self.documents = documents
@@ -30,6 +33,41 @@ class HybridSearch:
         return self.idx.bm25_search(query, limit)
 
     def weighted_search(self, query, alpha, limit=5):
+        literals = self._bm25_search(query, limit*500) #list of dictionaries
+        semantics = self.semantic_search.search_chunks(query, limit*500) ##list of dictionaries
+        scores = dict()
+        literals_normalized = [r['score'] for r in literals]
+        semantics_normalized = [r['score'] for r in semantics]
+        literals_normalized = normalize(literals_normalized)
+        semantics_normalized = normalize(semantics_normalized)
+        for i, result in enumerate(literals):
+            scores[result['id']] = {
+                'id':result['id'],
+                'title':result['title'],
+                'document':result['document'],
+                'bm_25_score':literals_normalized[i],
+                'semantic_score':0.0
+                }
+        for i, result in enumerate(semantics):
+            if result['id'] in scores:
+                scores[result['id']]['semantic_score']=semantics_normalized[i]
+            else:
+                scores[result['id']] = {
+                    'id': result['id'],
+                    'title':result['title'],
+                    'document':result['document'],
+                    'bm_25_score':0.0,
+                    'semantic_score':semantics_normalized[i]
+                }
+        for key in scores:
+            scores[key]['score'] = hybrid_score(scores[key]['bm_25_score'], scores[key]['semantic_score'], alpha)
+        list_to_return = sorted(scores.values(), key=lambda x:x['score'], reverse=True)[:limit]
+        return list_to_return
+
+
+        
+
+
         raise NotImplementedError("Weighted hybrid search is not implemented yet.")
 
     def rrf_search(self, query, k, limit=10):

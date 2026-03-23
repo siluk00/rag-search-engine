@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import os, json, re
+import os, json
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 def load_movies():
@@ -26,11 +26,6 @@ def main():
     #embed_query parser
     embed_query = subparsers.add_parser("embedquery", help="Put the text to be embedded") 
     embed_query.add_argument("query", type=str, help="Query to be embedded")
-
-    #search query parser
-    search_query = subparsers.add_parser("search", help="Search for the best similarities") 
-    search_query.add_argument("query", type=str, help="Query to be searched")
-    search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
  
     #chunk parser
     chunk_parser = subparsers.add_parser("chunk", help="Chunk text") 

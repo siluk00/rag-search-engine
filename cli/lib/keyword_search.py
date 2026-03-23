@@ -2,6 +2,7 @@ import string
 from nltk.stem import PorterStemmer
 import json, os, pickle, collections, math
 from constants import BM25_K1, BM25_B
+from pathlib import Path
 
 def tokenize_input(words) -> list[str]:
     stopwords, stemmer, table = __prebuild_tokenizetion()
@@ -32,6 +33,7 @@ def __prebuild_tokenizetion():
 
 class InvertedIndex:
     CACHE_DIR = "cache"
+    index_path = Path("cache/index.pkl")
 
     def __init__(self):
         os.makedirs(self.CACHE_DIR, exist_ok=True)
@@ -112,9 +114,18 @@ class InvertedIndex:
                 total_score += self.bm25(doc_id, token)
             scores[doc_id] = total_score
         
-        sorted_list = sorted(scores, key=scores.get, reverse=True)[:limit]
-        for i, doc_id in enumerate(sorted_list):
-            print(f"{i+1}. ({doc_id}) {self.docmap[doc_id]["title"]} - Score: {scores[doc_id]:.2f}")
+        sorted_scores = sorted(scores.items(),key=lambda item:item[1], reverse=True)
+        sorted_scores_limited = sorted_scores[:limit]
+        list_to_return = []
+        for doc_id, score in sorted_scores_limited:
+            doc = self.docmap[doc_id]
+            list_to_return.append({
+                'id':doc_id,
+                'score':score, 
+                'document':doc['description'][:100], 
+                'title':doc['title']})
+        return list_to_return
+
 
     #builds the inverted index 
     def build(self):

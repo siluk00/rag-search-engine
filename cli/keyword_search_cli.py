@@ -111,7 +111,11 @@ def main() -> None:
             print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
         case "bm25search":
             load(inverted_index)
-            inverted_index.bm25_search(args.query, args.limit)
+            scores = inverted_index.bm25_search(args.query, args.limit)
+            i = 0
+            for key, value in scores:
+                print(f"{i+1}. ({key}) {inverted_index.docmap[key]} - Score: {value:.2f}")
+                i+=1
         case _:
             parser.print_help()
 

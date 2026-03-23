@@ -100,8 +100,3 @@ class HybridSearch:
         list_to_return = sorted(scores.values(), key=lambda x:x['rrf_score'], reverse=True)[:limit]
 
         return list_to_return
-        
-
-
-
-        raise NotImplementedError("RRF hybrid search is not implemented yet.")

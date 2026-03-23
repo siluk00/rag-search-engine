@@ -1,5 +1,73 @@
 import argparse
+import os
 
+def enhance_query(query, method):
+    from dotenv import load_dotenv
+    from google import genai
+
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY environment variable not set")
+
+    client = genai.Client(api_key=api_key)
+    match method:
+        case 'spell':
+            response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+                                              f"""Fix any spelling errors in the user-provided movie search query below.
+                            Correct only clear, high-confidence typos. Do not rewrite, add, remove, or reorder words.
+                            Preserve punctuation and capitalization unless a change is required for a typo fix.
+                            If there are no spelling errors, or if you're unsure, output the original query unchanged.
+                            Output only the final query text, nothing else.
+                            User query: "{query}"
+                            """
+                                                         )
+            new_query = response.text
+        case 'rewrite':
+            response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+                                                      f"""Rewrite the user-provided movie search query below to be more specific and searchable.
+
+                            Consider:
+                            - Common movie knowledge (famous actors, popular films)
+                            - Genre conventions (horror = scary, animation = cartoon)
+                            - Keep the rewritten query concise (under 10 words)
+                            - It should be a Google-style search query, specific enough to yield relevant results
+                            - Don't use boolean logic
+
+                            Examples:
+                            - "that bear movie where leo gets attacked" -> "The Revenant Leonardo DiCaprio bear attack"
+                            - "movie about bear in london with marmalade" -> "Paddington London marmalade"
+                            - "scary movie with bear from few years ago" -> "bear horror movie 2015-2020"
+
+                            If you cannot improve the query, output the original unchanged.
+                            Output only the rewritten query text, nothing else.
+
+                            User query: "{query}"
+                            """
+                                                        )
+            new_query = response.text
+        case 'expand':
+            response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+                                                      f"""Expand the user-provided movie search 
+                                                      query below with a few related terms that are likely to appear in movie plot summaries.
+                                Keep expansions short and focused.
+                                Add only 3 to 5 terms.
+                                Prefer character, profession, setting, or theme words over abstract subject words.
+                                Output only the additional terms; they will be appended to the original query.
+
+                                Examples:
+                                - "math movie" -> "mathematician iq intelligent academic"
+                                - "science movie" -> "scientist laboratory professor discovery"
+                                - "comedy with bear" -> "funny humor lighthearted"
+
+                                User query: "{query}"
+                                """)
+            new_query = f"{query} {response.text}"
+        case _:
+            return ""
+    
+    print(f"Enhanced query ({method}): '{query}' -> '{new_query}'\n")
+    return new_query
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Hybrid Search CLI")
@@ -20,6 +88,7 @@ def main() -> None:
     rrf_search_query.add_argument("query", type=str, help="Query to be searched")
     rrf_search_query.add_argument("--k", type=int, nargs='?', default=60, help="k parameter")
     rrf_search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
+    rrf_search_query.add_argument("--enhance", type=str, nargs='?', choices=['spell', 'rewrite', 'expand'], help='Query enhancement method')
 
     args = parser.parse_args()
 
@@ -45,7 +114,12 @@ def main() -> None:
             from lib.hybrid_search import HybridSearch
             from semantic_search_cli import load_movies
             hybrid_search = HybridSearch(load_movies())
-            results = hybrid_search.rrf_search(args.query, args.k, args.limit)
+            query = args.query
+
+            if args.enhance != None:
+                query = enhance_query(query, args.enhance)
+
+            results = hybrid_search.rrf_search(query, args.k, args.limit)
             i = 1
             for result in results:
                 print(f"{i}. {result['title']}")

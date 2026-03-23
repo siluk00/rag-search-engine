@@ -73,7 +73,7 @@ def semantic_chunk(text, max_chunk_size, overlap):
 class SemanticSearch:
     def __init__(self, model_name = "all-MiniLM-L6-v2"):
         # Load the model (downloads automatically the first time)
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(model_name, device='cpu')
         self.embeddings = None #embeddings of the model
         self.documents = None #list of dictionaries. Each dict is a movie
         self.document_map = dict() #maps id to full document

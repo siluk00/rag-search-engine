@@ -14,6 +14,12 @@ def main() -> None:
     weighted_search_query.add_argument("query", type=str, help="Query to be searched")
     weighted_search_query.add_argument("--alpha", type=float, nargs='?', default=0.5, help="weigth")
     weighted_search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
+    
+    #rrf search query parser
+    rrf_search_query = subparsers.add_parser("rrf-search", help="Search for the best similarities with ranked data") 
+    rrf_search_query.add_argument("query", type=str, help="Query to be searched")
+    rrf_search_query.add_argument("--k", type=int, nargs='?', default=60, help="k parameter")
+    rrf_search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
 
     args = parser.parse_args()
 
@@ -33,6 +39,18 @@ def main() -> None:
                 print(f"{i}. {result['title']}")
                 print(f"Hybrid_score: {result['score']:.4f}")
                 print(f"BM25: {result['bm_25_score']:.4f}, Semantic: {result['semantic_score']:.4f}")
+                print(f"{result['document']}")
+                i+=1
+        case 'rrf-search':
+            from lib.hybrid_search import HybridSearch
+            from semantic_search_cli import load_movies
+            hybrid_search = HybridSearch(load_movies())
+            results = hybrid_search.rrf_search(args.query, args.k, args.limit)
+            i = 1
+            for result in results:
+                print(f"{i}. {result['title']}")
+                print(f"RRF_score: {result['rrf_score']:.4f}")
+                print(f"BM25 rank: {result['bm_25_score']}, Semantic rank: {result['semantic_score']}")
                 print(f"{result['document']}")
                 i+=1
         case _:

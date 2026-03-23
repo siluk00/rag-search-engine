@@ -9,6 +9,8 @@ wheels/
 # Virtual environments
 .venv
 
+
 # My files
 data
 cache
+.env

@@ -97,6 +97,6 @@ class HybridSearch:
                 rrf_score(scores[key]['bm_25_score'], k) + \
                 rrf_score(scores[key]['semantic_score'], k)
 
-        list_to_return = sorted(scores.values(), key=lambda x:x['rrf_score'], reverse=True)[:limit]
+        list_to_return = sorted(scores.values(), key=lambda x:x['rrf_score'], reverse=True)[:limit] #list of dictionaries
 
         return list_to_return

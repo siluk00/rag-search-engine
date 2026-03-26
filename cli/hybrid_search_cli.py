@@ -1,5 +1,5 @@
 import argparse
-import os
+import os, json
 
 def enhance_query(query, method):
     from dotenv import load_dotenv
@@ -69,7 +69,37 @@ def enhance_query(query, method):
     print(f"Enhanced query ({method}): '{query}' -> '{new_query}'\n")
     return new_query
 
-            
+def evaluate(query, formatted_results):
+    from dotenv import load_dotenv
+    from google import genai
+
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY environment variable not set")
+
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+                        f"""Rate how relevant each result is to this query on a 0-3 scale:
+
+                        Query: "{query}"
+
+                        Results:
+                        {chr(10).join(formatted_results)}
+
+                        Scale:
+                        - 3: Highly relevant
+                        - 2: Relevant
+                        - 1: Marginally relevant
+                        - 0: Not relevant
+
+                        Do NOT give any numbers other than 0, 1, 2, or 3.
+
+                        Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
+
+                        [2, 0, 3, 2, 0, 1]"""
+    )
+    return json.loads(response.text)
 
 
 
@@ -94,6 +124,7 @@ def main() -> None:
     rrf_search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
     rrf_search_query.add_argument("--enhance", type=str, nargs='?', choices=['spell', 'rewrite', 'expand'], help='Query enhancement method')
     rrf_search_query.add_argument("--rerank-method", type=str, nargs='?', choices=['individual', 'batch', 'cross_encoder'], help='Query reranking method')
+    rrf_search_query.add_argument("--evaluate", action='store_true', help='Evaluate results')
 
     args = parser.parse_args()
 
@@ -145,16 +176,27 @@ def main() -> None:
 
 
             results = results[:args.limit]
+            evaluation = None
 
-            i = 1
-            for result in results:
-                print(f"{i}. {result['title']}")
+            if args.evaluate:
+                movie_lines = []
+                for result in results:
+                    movie_lines.append(f"id: {result['id']}, title: {result['title']}, description: {result['document']}")
+                str_to_proccess = "\n".join(movie_lines)
+                evaluation = evaluate(query, str_to_proccess)
+
+            for i, result in enumerate(results):
+                print(f"{i+1}. {result['title']}")
                 if args.rerank_method == 'cross_encoder':
                     print(f"Cross Encoder Score: {result['new_score']}")
                 print(f"RRF_score: {result['rrf_score']:.4f}")
                 print(f"BM25 rank: {result['bm_25_score']}, Semantic rank: {result['semantic_score']}")
+                if args.evaluate:
+                    print(f"Evaluation: {evaluation[i]}/3")
                 print(f"{result['document']}")
-                i+=1            
+    
+
+            
         case _:
             parser.print_help()
 

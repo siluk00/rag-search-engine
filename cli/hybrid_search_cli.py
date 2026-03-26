@@ -1,5 +1,5 @@
 import argparse
-import os, time, json
+import os
 
 def enhance_query(query, method):
     from dotenv import load_dotenv
@@ -69,68 +69,6 @@ def enhance_query(query, method):
     print(f"Enhanced query ({method}): '{query}' -> '{new_query}'\n")
     return new_query
 
-def individual_rerank(query, doc, method):
-    from dotenv import load_dotenv
-    from google import genai
-
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY environment variable not set")
-
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model='gemma-3-27b-it', contents=\
-                                f"""Rate how well this movie matches the search query.
-
-                                Query: "{query}"
-                                Movie: {doc.get("title", "")} - {doc.get("document", "")}
-
-                                Consider:
-                                - Direct relevance to query
-                                - User intent (what they're looking for)
-                                - Content appropriateness
-
-                                Rate 0-10 (10 = perfect match).
-                                Output ONLY the number in your response, no other text or explanation.
-
-                                Score:"""
-                                                      )         
-    time.sleep(1)
-    return response.text
-
-def batch_rerank(query, doc_list_str):
-    from dotenv import load_dotenv
-    from google import genai
-
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY environment variable not set")
-
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model='gemma-3-27b-it', contents=\
-                                f"""Rank the movies listed below by relevance to the following search query.
-
-                                Query: "{query}"
-
-                                Movies:
-                                {doc_list_str}
-
-                                Consider:
-                                - Direct relevance to query
-                                - User intent (what they're looking for)
-                                - Content appropriateness
-
-                                Return ONLY the movie IDs in order of relevance (best match first). Return a valid JSON list, nothing else.
-
-                                For example:
-                                [75, 12, 34, 2, 1]
-
-                                Ranking:""")
-    response = json.loads(response.text)
-    return response
             
 
 
@@ -155,7 +93,7 @@ def main() -> None:
     rrf_search_query.add_argument("--k", type=int, nargs='?', default=60, help="k parameter")
     rrf_search_query.add_argument("--limit", type=int, nargs='?', default=5, help="limit search")
     rrf_search_query.add_argument("--enhance", type=str, nargs='?', choices=['spell', 'rewrite', 'expand'], help='Query enhancement method')
-    rrf_search_query.add_argument("--rerank-method", type=str, nargs='?', choices=['individual', 'batch'], help='Query reranking method')
+    rrf_search_query.add_argument("--rerank-method", type=str, nargs='?', choices=['individual', 'batch', 'cross_encoder'], help='Query reranking method')
 
     args = parser.parse_args()
 
@@ -179,6 +117,7 @@ def main() -> None:
                 i+=1
         case 'rrf-search':
             from lib.hybrid_search import HybridSearch
+            from lib.rerank import individual_rerank, batch_rerank, cross_encoder_rerank
             from semantic_search_cli import load_movies
             hybrid_search = HybridSearch(load_movies())
             query = args.query
@@ -201,12 +140,17 @@ def main() -> None:
                     ranks = batch_rerank(query, str_to_proccess)
                     rank_map= {doc_id: rank for rank, doc_id in enumerate(ranks)}
                     results.sort(key=lambda x:rank_map.get(x['id'], len(results)))
+                elif args.rerank_method == 'cross_encoder':
+                    results = cross_encoder_rerank(query, results)
+
 
             results = results[:args.limit]
 
             i = 1
             for result in results:
                 print(f"{i}. {result['title']}")
+                if args.rerank_method == 'cross_encoder':
+                    print(f"Cross Encoder Score: {result['new_score']}")
                 print(f"RRF_score: {result['rrf_score']:.4f}")
                 print(f"BM25 rank: {result['bm_25_score']}, Semantic rank: {result['semantic_score']}")
                 print(f"{result['document']}")

@@ -223,7 +223,7 @@ class ChunkedSemanticSearch(SemanticSearch):
             list_to_return.append({
                 "id": doc["id"],
                 "title": doc["title"],
-                "document": doc["description"][0:100],
+                "document": doc["description"],
                 "score": round(score, SCORE_PRECISION),
                 "metadata": {},
             })

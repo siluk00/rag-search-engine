@@ -122,7 +122,7 @@ class InvertedIndex:
             list_to_return.append({
                 'id':doc_id,
                 'score':score, 
-                'document':doc['description'][:100], 
+                'document':doc['description'], 
                 'title':doc['title']})
         return list_to_return
 

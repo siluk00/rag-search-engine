@@ -55,6 +55,45 @@ def rag_command(query, command, limit=10):
 
                 Provide a comprehensive 3–4 sentence answer that combines information from multiple sources:""")
         print("LLM summary:")
+    elif command == 'cit':
+        response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+                f"""Answer the query below and give information based on the provided documents.
+
+                The answer should be tailored to users of Hoopla, a movie streaming service.
+                If not enough information is available to provide a good answer, say so, but give the best answer possible while citing the sources available.
+
+                Query: {query}
+
+                Documents:
+                {docs}
+
+                Instructions:
+                - Provide a comprehensive answer that addresses the query
+                - Cite sources in the format [1], [2], etc. when referencing information
+                - If sources disagree, mention the different viewpoints
+                - If the answer isn't in the provided documents, say "I don't have enough information"
+                - Be direct and informative
+
+                Answer:""")
+        print("LLM Answer:")     
+    elif command == 'que':
+        response = client.models.generate_content(model='gemma-3-27b-it', contents=\
+            f"""Answer the user's question based on the provided movies that are available on Hoopla, a streaming service.
+
+            Question: {query}
+
+            Documents:
+            {docs}
+
+            Instructions:
+            - Answer questions directly and concisely but with the complete information asked
+            - Be casual and conversational
+            - Don't be cringe or hype-y
+            - Talk like a normal person would in a chat conversation
+            - Search thoroughly the docs for to answr the question
+
+            Answer:""")
+        print("Answer:")                              
     print(f"{response.text}")                              
 
 def main():
@@ -68,6 +107,14 @@ def main():
     summarize_parser.add_argument("query", type=str, help="Search query for summarization")
     summarize_parser.add_argument("limit", type=int, nargs='?', help="limit results")
 
+    citations_parser = subparsers.add_parser("citations", help="Perform citations")
+    citations_parser.add_argument("query", type=str, help="Search query for citation")
+    citations_parser.add_argument("limit", type=int, nargs='?', help="limit results")
+
+    queestion_parser = subparsers.add_parser("question", help="Perform a question based on movie search")
+    queestion_parser.add_argument("query", type=str, help="Search query for questioning")
+    queestion_parser.add_argument("limit", type=int, nargs='?', help="limit results")
+
     args = parser.parse_args()
 
     match args.command:
@@ -78,6 +125,14 @@ def main():
             query = args.query
             limit = args.limit
             rag_command(query, 'sum', limit)
+        case 'citations':
+            query = args.query
+            limit = args.limit
+            rag_command(query, 'cit', limit)
+        case 'question':
+            query = args.query
+            limit = args.limit
+            rag_command(query, 'que', limit)
         case _:
             parser.print_help()
 
